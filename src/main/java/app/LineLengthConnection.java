@@ -8,6 +8,7 @@ import akka.actor.UntypedActor;
 import akka.event.Logging;
 import akka.event.LoggingAdapter;
 import akka.io.Tcp;
+import akka.io.TcpMessage;
 import akka.util.ByteString;
 
 public class LineLengthConnection extends UntypedActor {
@@ -27,6 +28,8 @@ public class LineLengthConnection extends UntypedActor {
 		lineReader = getContext().actorOf(Props.create(LineReader.class, "UTF-8"));
 		lineLengthService = getContext().actorOf(Props.create(LineLengthService.class));
 		getContext().watch(tcp);
+		tcp.tell(TcpMessage.register(getSelf()), getSelf());
+		tcp.tell(TcpMessage.resumeReading(), getSelf());
 	}
 
 	@Override
@@ -36,6 +39,7 @@ public class LineLengthConnection extends UntypedActor {
 			lineReader.tell(data, lineLengthService);
 		} else if (message instanceof Tcp.Write) {
 			tcp.tell(message, getSelf());
+			tcp.tell(TcpMessage.resumeReading(), getSelf());
 		} else if (message instanceof Tcp.ConnectionClosed) {
 			log.info("The connection from {}:{} is closed.", remote.getHostString(), remote.getPort());
 			getContext().stop(getSelf());
