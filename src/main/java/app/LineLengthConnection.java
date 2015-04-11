@@ -37,6 +37,8 @@ public class LineLengthConnection extends UntypedActor {
 		if (message instanceof Tcp.Received) {
 			ByteString data = ((Tcp.Received) message).data();
 			lineReader.tell(data, lineLengthService);
+		} else if (message instanceof Tcp.ResumeReading$) {
+			tcp.tell(message, getSelf());
 		} else if (message instanceof Tcp.Write) {
 			tcp.tell(message, getSelf());
 			tcp.tell(TcpMessage.resumeReading(), getSelf());
