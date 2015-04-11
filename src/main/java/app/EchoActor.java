@@ -29,8 +29,7 @@ public class EchoActor extends UntypedActor {
 			Tcp.Command cmd = TcpMessage.write(data);
 			connection.tell(cmd, getSelf());
 		} else if (message instanceof Tcp.ConnectionClosed) {
-			log.info("The connection {}:{} is closed.", remote.getHostString(),
-					remote.getPort());
+			log.info("The connection {}:{} is closed.", remote.getHostString(), remote.getPort());
 			getContext().stop(getSelf());
 		} else {
 			unhandled(message);

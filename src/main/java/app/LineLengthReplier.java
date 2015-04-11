@@ -26,13 +26,11 @@ public class LineLengthReplier extends UntypedActor {
 		this(remote, connection, "UTF-8");
 	}
 
-	public LineLengthReplier(InetSocketAddress remote, ActorRef connection,
-			String charset) {
+	public LineLengthReplier(InetSocketAddress remote, ActorRef connection, String charset) {
 		this.remote = remote;
 		this.connection = connection;
 		this.charset = charset;
-		lineReader = getContext().actorOf(
-				Props.create(LineReader.class, charset));
+		lineReader = getContext().actorOf(Props.create(LineReader.class, charset));
 		getContext().watch(connection);
 	}
 
@@ -44,12 +42,10 @@ public class LineLengthReplier extends UntypedActor {
 		} else if (message instanceof LineReader.Result) {
 			String s = ((LineReader.Result) message).get();
 			String reply = String.format("%d\n", s.length());
-			Tcp.Command cmd = TcpMessage.write(ByteString.fromString(reply,
-					charset));
+			Tcp.Command cmd = TcpMessage.write(ByteString.fromString(reply, charset));
 			connection.tell(cmd, getSelf());
 		} else if (message instanceof Tcp.ConnectionClosed) {
-			log.info("The connection from {}:{} is closed.",
-					remote.getHostString(), remote.getPort());
+			log.info("The connection from {}:{} is closed.", remote.getHostString(), remote.getPort());
 			getContext().stop(getSelf());
 		} else {
 			unhandled(message);
