@@ -12,14 +12,14 @@ import akka.io.TcpMessage;
 
 import com.typesafe.config.Config;
 
-public class Listener extends UntypedActor {
+public class LineLengthListener extends UntypedActor {
 	final ActorRef tcpManager = Tcp.get(getContext().system()).getManager();
 
 	Config config;
 
 	LoggingAdapter log = Logging.getLogger(getContext().system(), this);
 
-	public Listener(Config config) {
+	public LineLengthListener(Config config) {
 		this.config = config;
 	}
 

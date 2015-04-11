@@ -20,7 +20,7 @@ public class Main implements Bootable {
 		System.setProperty("java.net.preferIPv4Stack", "true");
 		Config config = ConfigFactory.load();
 		actorSystem = ActorSystem.create("default", config);
-		ActorRef listener = actorSystem.actorOf(Props.create(Listener.class, config));
+		ActorRef listener = actorSystem.actorOf(Props.create(LineLengthListener.class, config));
 		listener.tell("start", null);
 	}
 
