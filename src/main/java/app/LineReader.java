@@ -55,7 +55,7 @@ public class LineReader extends UntypedActor {
 					if (c == '\n') {
 						String s = sb.toString();
 						sb = new StringBuilder();
-						getSender().tell(new Result(s), getSelf());
+						getSender().tell(new Result(s), getContext().parent());
 					} else if (c != '\r') {
 						sb.append(c);
 					}

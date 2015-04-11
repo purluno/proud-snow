@@ -34,7 +34,7 @@ public class Listener extends UntypedActor {
 		} else if (message instanceof Tcp.Connected) {
 			InetSocketAddress remote = ((Tcp.Connected) message).remoteAddress();
 			log.info("A new connection from {}:{}", remote.getHostString(), remote.getPort());
-			ActorRef handler = getContext().actorOf(Props.create(LineLengthReplier.class, remote, getSender()));
+			ActorRef handler = getContext().actorOf(Props.create(LineLengthConnection.class, remote, getSender()));
 			Tcp.Command cmd = TcpMessage.register(handler);
 			getSender().tell(cmd, getSelf());
 		} else {
