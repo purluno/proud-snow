@@ -1,5 +1,6 @@
 package app;
 
+import static app.Ack.ACK;
 import static java.util.concurrent.TimeUnit.SECONDS;
 
 import java.net.InetSocketAddress;
@@ -25,15 +26,23 @@ public class LoadTest extends UntypedActor {
 	int count;
 
 	@Override
+	public void postStop() throws Exception {
+		log.debug("postStop");
+	}
+
+	@Override
 	public void onReceive(Object message) throws Exception {
 		if (message == "start") {
 			start();
 		} else if (message instanceof Tcp.Connected) {
 			tcp = getSender();
 			tcp.tell(TcpMessage.register(getSelf()), getSelf());
+			getContext().watch(tcp);
 			getSelf().tell("send", getSelf());
 		} else if (message == "send") {
 			send();
+		} else if (message == ACK) {
+			getSelf().tell("send", getSelf());
 		} else if (message instanceof Tcp.Received) {
 			count++;
 		} else if (message == "log") {
@@ -56,7 +65,6 @@ public class LoadTest extends UntypedActor {
 
 	void send() {
 		ByteString data = ByteString.fromString("0123456789ABCDEFGHIJKLMNOPQRSTUVWXYZabcdefghijklmnopqrstuvwxyz\n");
-		tcp.tell(TcpMessage.write(data), getSelf());
-		getSelf().tell("send", getSelf());
+		tcp.tell(TcpMessage.write(data, ACK), getSelf());
 	}
 }

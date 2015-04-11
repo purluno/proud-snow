@@ -9,7 +9,6 @@ import java.nio.charset.CoderResult;
 import akka.actor.UntypedActor;
 import akka.event.Logging;
 import akka.event.LoggingAdapter;
-import akka.io.TcpMessage;
 import akka.util.ByteString;
 
 public class LineReader extends UntypedActor {
@@ -51,7 +50,6 @@ public class LineReader extends UntypedActor {
 	}
 
 	void put(ByteString message) {
-		boolean composed = false;
 		ByteBuffer bb = message.asByteBuffer();
 		while (bb.hasRemaining()) {
 			CoderResult r = decoder.decode(bb, cb, false);
@@ -65,15 +63,11 @@ public class LineReader extends UntypedActor {
 					String s = sb.toString();
 					sb = new StringBuilder();
 					getSender().tell(new Result(s), getContext().parent());
-					composed = true;
 				} else if (c != '\r') {
 					sb.append(c);
 				}
 			}
 			cb.compact();
-		}
-		if (!composed) {
-			getContext().parent().tell(TcpMessage.resumeReading(), getSelf());
 		}
 	}
 }

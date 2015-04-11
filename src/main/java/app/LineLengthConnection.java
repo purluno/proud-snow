@@ -22,9 +22,9 @@ public class LineLengthConnection extends UntypedActor {
 
 	ActorRef lineLengthService;
 
-	public LineLengthConnection(InetSocketAddress remote, ActorRef tcp) {
+	public LineLengthConnection(InetSocketAddress remote, ActorRef tcpConnection) {
 		this.remote = remote;
-		this.tcp = tcp;
+		this.tcp = getContext().actorOf(Props.create(ThrottledConnection.class, tcpConnection));
 		lineReader = getContext().actorOf(Props.create(LineReader.class, "UTF-8"));
 		lineLengthService = getContext().actorOf(Props.create(LineLengthService.class));
 		getContext().watch(tcp);
@@ -37,11 +37,8 @@ public class LineLengthConnection extends UntypedActor {
 		if (message instanceof Tcp.Received) {
 			ByteString data = ((Tcp.Received) message).data();
 			lineReader.tell(data, lineLengthService);
-		} else if (message instanceof Tcp.ResumeReading$) {
-			tcp.tell(message, getSelf());
 		} else if (message instanceof Tcp.Write) {
 			tcp.tell(message, getSelf());
-			tcp.tell(TcpMessage.resumeReading(), getSelf());
 		} else if (message instanceof Tcp.ConnectionClosed) {
 			log.info("The connection from {}:{} is closed.", remote.getHostString(), remote.getPort());
 			getContext().stop(getSelf());
