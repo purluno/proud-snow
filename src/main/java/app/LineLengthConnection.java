@@ -1,6 +1,7 @@
 package app;
 
 import java.net.InetSocketAddress;
+import java.nio.ByteBuffer;
 
 import akka.actor.ActorRef;
 import akka.actor.Props;
@@ -24,7 +25,7 @@ public class LineLengthConnection extends UntypedActor {
 
 	public LineLengthConnection(InetSocketAddress remote, ActorRef tcpConnection) {
 		this.remote = remote;
-		this.tcp = getContext().actorOf(Props.create(ThrottledConnection.class, tcpConnection));
+		this.tcp = tcpConnection;
 		lineReader = getContext().actorOf(Props.create(LineReader.class, "UTF-8"));
 		lineLengthService = getContext().actorOf(Props.create(LineLengthService.class));
 		getContext().watch(tcp);
@@ -36,7 +37,13 @@ public class LineLengthConnection extends UntypedActor {
 	public void onReceive(Object message) throws Exception {
 		if (message instanceof Tcp.Received) {
 			ByteString data = ((Tcp.Received) message).data();
+			for (ByteBuffer bb : data.getByteBuffers()) {
+				if (bb.isDirect()) {
+					log.debug("direct");
+				}
+			}
 			lineReader.tell(data, lineLengthService);
+			tcp.tell(TcpMessage.resumeReading(), getSelf());
 		} else if (message instanceof Tcp.Write) {
 			tcp.tell(message, getSelf());
 		} else if (message instanceof Tcp.ConnectionClosed) {

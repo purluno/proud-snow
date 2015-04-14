@@ -14,13 +14,13 @@ public class LineLengthService extends UntypedActor {
 	@Override
 	public void onReceive(Object message) throws Exception {
 		if (message instanceof LineReader.Result) {
-			onLine((LineReader.Result) message);
+			process((LineReader.Result) message);
 		} else {
 			unhandled(message);
 		}
 	}
 
-	void onLine(Result result) {
+	void process(Result result) {
 		String line = result.get();
 		String reply = String.format("%d\n", line.length());
 		Tcp.Command cmd = TcpMessage.write(ByteString.fromString(reply, "UTF-8"));

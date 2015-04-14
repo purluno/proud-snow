@@ -26,11 +26,6 @@ public class LoadTest extends UntypedActor {
 	int count;
 
 	@Override
-	public void postStop() throws Exception {
-		log.debug("postStop");
-	}
-
-	@Override
 	public void onReceive(Object message) throws Exception {
 		if (message == "start") {
 			start();
