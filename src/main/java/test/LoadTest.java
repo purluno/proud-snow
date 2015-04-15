@@ -12,6 +12,7 @@ import scala.concurrent.duration.Duration;
 import scala.concurrent.duration.FiniteDuration;
 import akka.actor.ActorRef;
 import akka.actor.Cancellable;
+import akka.actor.Terminated;
 import akka.actor.UntypedActor;
 import akka.event.Logging;
 import akka.event.LoggingAdapter;
@@ -25,11 +26,24 @@ public class LoadTest extends UntypedActor {
 
 	ActorRef tcp;
 
-	int count;
-
 	Cancellable timer;
 
 	Random random = new Random();
+
+	ActorRef connectionCounter;
+
+	ActorRef bytesCounter;
+
+	public LoadTest(ActorRef connectionCounter, ActorRef bytesCounter) {
+		this.connectionCounter = connectionCounter;
+		this.bytesCounter = bytesCounter;
+		getSelf().tell("start", getSelf());
+	}
+
+	@Override
+	public void postStop() throws Exception {
+		connectionCounter.tell(-1, getSelf());
+	}
 
 	@Override
 	public void onReceive(Object message) throws Exception {
@@ -40,25 +54,14 @@ public class LoadTest extends UntypedActor {
 			tcp.tell(TcpMessage.register(getSelf()), getSelf());
 			getContext().watch(tcp);
 			scheduleSend();
+			connectionCounter.tell(1, getSelf());
 		} else if (message == "send") {
 			send();
-		} else if (message instanceof Tcp.Received) {
-			count++;
-		} else if (message == "log") {
-			log.debug("count: {}", count);
+		} else if (message instanceof Terminated) {
+			throw new Exception("connection closed!");
 		} else {
 			unhandled(message);
 		}
-	}
-
-	void scheduleSend() {
-		if (timer != null) {
-			timer.cancel();
-			timer = null;
-		}
-		FiniteDuration interval = Duration.create(1000, MILLISECONDS);
-		timer = getContext().system().scheduler()
-				.schedule(interval, interval, getSelf(), "send", getContext().dispatcher(), getSelf());
 	}
 
 	void start() {
@@ -72,7 +75,20 @@ public class LoadTest extends UntypedActor {
 		tcpManager.tell(cmd, getSelf());
 	}
 
+	void scheduleSend() {
+		if (timer != null) {
+			timer.cancel();
+			timer = null;
+		}
+		FiniteDuration interval = Duration.create(1000, MILLISECONDS);
+		timer = getContext().system().scheduler()
+				.schedule(interval, interval, getSelf(), "send", getContext().dispatcher(), getSelf());
+	}
+
 	void send() {
+		if (tcp == null) {
+			return;
+		}
 		byte[] bytes = new byte[200];
 		for (int i = 0; i < bytes.length - 1; i++) {
 			bytes[i] = (byte) random.nextInt('z' - '0');
@@ -80,5 +96,6 @@ public class LoadTest extends UntypedActor {
 		bytes[bytes.length - 1] = '\n';
 		ByteString data = ByteString.fromArray(bytes);
 		tcp.tell(TcpMessage.write(data), getSelf());
+		bytesCounter.tell(bytes.length, getSelf());
 	}
 }
