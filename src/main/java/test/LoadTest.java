@@ -1,15 +1,17 @@
-package app;
+package test;
 
-import static app.Ack.ACK;
+import static java.util.concurrent.TimeUnit.MILLISECONDS;
 import static java.util.concurrent.TimeUnit.SECONDS;
 
 import java.net.InetSocketAddress;
 import java.util.Collections;
 import java.util.List;
+import java.util.Random;
 
 import scala.concurrent.duration.Duration;
 import scala.concurrent.duration.FiniteDuration;
 import akka.actor.ActorRef;
+import akka.actor.Cancellable;
 import akka.actor.UntypedActor;
 import akka.event.Logging;
 import akka.event.LoggingAdapter;
@@ -25,6 +27,10 @@ public class LoadTest extends UntypedActor {
 
 	int count;
 
+	Cancellable timer;
+
+	Random random = new Random();
+
 	@Override
 	public void onReceive(Object message) throws Exception {
 		if (message == "start") {
@@ -33,11 +39,9 @@ public class LoadTest extends UntypedActor {
 			tcp = getSender();
 			tcp.tell(TcpMessage.register(getSelf()), getSelf());
 			getContext().watch(tcp);
-			getSelf().tell("send", getSelf());
+			scheduleSend();
 		} else if (message == "send") {
 			send();
-		} else if (message == ACK) {
-			getSelf().tell("send", getSelf());
 		} else if (message instanceof Tcp.Received) {
 			count++;
 		} else if (message == "log") {
@@ -45,6 +49,16 @@ public class LoadTest extends UntypedActor {
 		} else {
 			unhandled(message);
 		}
+	}
+
+	void scheduleSend() {
+		if (timer != null) {
+			timer.cancel();
+			timer = null;
+		}
+		FiniteDuration interval = Duration.create(1000, MILLISECONDS);
+		timer = getContext().system().scheduler()
+				.schedule(interval, interval, getSelf(), "send", getContext().dispatcher(), getSelf());
 	}
 
 	void start() {
@@ -59,7 +73,12 @@ public class LoadTest extends UntypedActor {
 	}
 
 	void send() {
-		ByteString data = ByteString.fromString("0123456789ABCDEFGHIJKLMNOPQRSTUVWXYZabcdefghijklmnopqrstuvwxyz\n");
-		tcp.tell(TcpMessage.write(data, ACK), getSelf());
+		byte[] bytes = new byte[200];
+		for (int i = 0; i < bytes.length - 1; i++) {
+			bytes[i] = (byte) random.nextInt('z' - '0');
+		}
+		bytes[bytes.length - 1] = '\n';
+		ByteString data = ByteString.fromArray(bytes);
+		tcp.tell(TcpMessage.write(data), getSelf());
 	}
 }
